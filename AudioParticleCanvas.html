@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Particle Canvas</title>
+  <style>
+    /* Reset and Base Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0d0d0d;
+      user-select: none;
+    }
+
+    /* Canvas Styling */
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* Hamburger Menu Styles */
+    .hamburger {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 30px;
+      height: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      z-index: 11;
+    }
+
+    .hamburger div {
+      width: 100%;
+      height: 4px;
+      background: #ffffff;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    /* Hamburger Animation */
+    .hamburger.active div:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .hamburger.active div:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.active div:nth-child(3) {
+      transform: rotate(-45deg) translate(7px, -8px);
+    }
+
+    /* Control Panel Styles */
+    #controlPanel {
+      position: fixed;
+      top: 0;
+      left: -350px;
+      width: 350px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+      transition: left 0.3s ease;
+      z-index: 10;
+      overflow-y: auto;
+    }
+
+    #controlPanel.open {
+      left: 0;
+    }
+
+    /* Control Panel Heading */
+    #controlPanel h2 {
+      color: #fff;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    /* Control Group */
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      color: #fff;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .control-group input[type="range"],
+    .control-group input[type="file"],
+    .control-group select,
+    .control-group input[type="color"] {
+      width: 100%;
+      padding: 5px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .control-group input[type="checkbox"] {
+      transform: scale(1.5);
+      margin-right: 10px;
+    }
+
+    /* Button Styles */
+    .control-group button {
+      width: 100%;
+      padding: 10px;
+      background: #ffffff;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .control-group button:hover {
+      background: #e0e0e0;
+    }
+
+    /* Audio Controls */
+    #audioControls {
+      display: none;
+      flex-direction: column;
+    }
+
+    #audioControls.active {
+      display: flex;
+    }
+
+    /* Toggle Switch Styles */
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+      margin-top: 10px;
+      color: #fff;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      #controlPanel {
+        width: 80%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hamburger Menu -->
+  <div class="hamburger" id="hamburger">
+    <div></div>
+    <div></div>
+    <div></div>
+  </div>
+
+  <!-- Control Panel -->
+  <div id="controlPanel">
+    <h2> 
+      <span style="padding-left: 1ch;">Audio Particle Canvas</span>
+    </h2>
+    <h2>Settings</h2>
+    <!-- Particle Count -->
+    <div class="control-group">
+      <label for="particleCount">Particle Count: <span id="particleCountValue">100</span></label>
+      <input type="range" id="particleCount" min="50" max="500" value="100">
+    </div>
+
+    <!-- Particle Shape -->
+    <div class="control-group">
+      <label for="particleShape">Particle Shape:</label>
+      <select id="particleShape">
+        <option value="circle">Circle</option>
+        <option value="triangle">Triangle</option>
+        <option value="square">Square</option>
+      </select>
+    </div>
+
+    <!-- Particle Size -->
+    <div class="control-group">
+      <label for="particleSize">Particle Size: <span id="particleSizeValue">3</span></label>
+      <input type="range" id="particleSize" min="1" max="10" value="3">
+    </div>
+
+    <!-- Particle Speed -->
+    <div class="control-group">
+      <label for="particleSpeed">Particle Speed: <span id="particleSpeedValue">1</span></label>
+      <input type="range" id="particleSpeed" min="0.1" max="5" step="0.1" value="1">
+    </div>
+
+    <!-- Audio Reactive Toggle -->
+    <div class="control-group toggle-switch">
+      <input type="checkbox" id="toggleAudio">
+      <label for="toggleAudio" style="color: #fff; font-weight: normal;">Enable Audio Reactive</label>
+    </div>
+
+    <!-- Audio Controls -->
+    <div id="audioControls">
+      <!-- Audio Playback Controls -->
+      <div class="control-group">
+        <button id="playAudio">Play Audio</button>
+        <button id="pauseAudio">Pause Audio</button>
+        <button id="stopAudio">Stop Audio</button>
+      </div>
+
+      <!-- Audio Input Options -->
+      <div class="control-group">
+        <button id="micButton">Use Microphone</button>
+        <label for="audioFile" style="color: #fff; margin-top: 10px;">Or Upload Audio:</label>
+        <input type="file" id="audioFile" accept="audio/*">
+      </div>
+
+      <!-- Audio Volume Control -->
+      <div class="control-group">
+        <label for="audioVolume">Audio Volume: <span id="audioVolumeValue">1</span></label>
+        <input type="range" id="audioVolume" min="0" max="2" step="0.1" value="1">
+      </div>
+
+      <!-- Audio Impact Control -->
+      <div class="control-group">
+        <label for="audioImpact">Audio Impact: <span id="audioImpactValue">1</span></label>
+        <input type="range" id="audioImpact" min="0" max="5" step="0.1" value="1">
+      </div>
+
+      <!-- Status Indicator -->
+      <div class="status-indicator" id="audioStatus">No Audio Playing</div>
+    </div>
+
+    <!-- Device Motion Toggle -->
+    <div class="control-group toggle-switch">
+      <input type="checkbox" id="sensorToggle">
+      <label for="sensorToggle" style="color: #fff; font-weight: normal;">Enable Device Motion</label>
+    </div>
+
+    <!-- Theme Color Picker -->
+    <div class="control-group">
+      <label for="themeColor">Theme Color:</label>
+      <input type="color" id="themeColor" value="#ffffff">
+    </div>
+
+    <!-- Interaction Toggle -->
+    <div class="control-group toggle-switch">
+      <input type="checkbox" id="toggleInteraction" checked>
+      <label for="toggleInteraction" style="color: #fff; font-weight: normal;">Enable Mouse/Touch Interaction</label>
+    </div>
+    
+    <!-- github link -->
+    <div>
+        <a href="https://github.com/aznight85048/audio-particle-canvas" "target=_blank" title="Visit GitHub Repository" style="color:white">github</a>@202501
+    </div> 
+    
+  </div>
+
+  <!-- Canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <script>
+    // Get DOM Elements
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    const hamburger = document.getElementById('hamburger');
+    const controlPanel = document.getElementById('controlPanel');
+    const particleCountSlider = document.getElementById('particleCount');
+    const particleCountValue = document.getElementById('particleCountValue');
+    const particleShapeSelect = document.getElementById('particleShape');
+    const particleSizeSlider = document.getElementById('particleSize');
+    const particleSizeValue = document.getElementById('particleSizeValue');
+    const particleSpeedSlider = document.getElementById('particleSpeed');
+    const particleSpeedValue = document.getElementById('particleSpeedValue');
+    const toggleAudioCheckbox = document.getElementById('toggleAudio');
+    const audioControls = document.getElementById('audioControls');
+    const micButton = document.getElementById('micButton');
+    const audioFileInput = document.getElementById('audioFile');
+    const audioVolumeSlider = document.getElementById('audioVolume');
+    const audioVolumeValue = document.getElementById('audioVolumeValue');
+    const pauseAudioBtn = document.getElementById('pauseAudio');
+    const resumeAudioBtn = document.getElementById('resumeAudio');
+    const stopAudioBtn = document.getElementById('stopAudio');
+    const playAudioBtn = document.getElementById('playAudio');
+    const sensorToggle = document.getElementById('sensorToggle');
+    const themeColorPicker = document.getElementById('themeColor');
+    const audioImpactSlider = document.getElementById('audioImpact');
+    const audioImpactValue = document.getElementById('audioImpactValue');
+    const audioStatus = document.getElementById('audioStatus');
+    const toggleInteraction = document.getElementById('toggleInteraction');
+
+    // Canvas Setup
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      init(); // Re-initialize particles on resize
+    });
+
+    // Hamburger Menu Toggle
+    hamburger.addEventListener('click', (event) => {
+      controlPanel.classList.toggle('open');
+      // Animate hamburger
+      hamburger.classList.toggle('active');
+
+      // Prevent event from propagating to the canvas
+      event.stopPropagation();
+    });
+
+    // Close Control Panel when clicking outside
+    window.addEventListener('click', (event) => {
+      if (!controlPanel.contains(event.target) && !hamburger.contains(event.target) && controlPanel.classList.contains('open')) {
+        controlPanel.classList.remove('open');
+        hamburger.classList.remove('active');
+      }
+    });
+
+    // Mouse and Touch Position
+    const mouse = {
+      x: null,
+      y: null,
+      radius: 100
+    };
+
+    let interactionEnabled = true;
+
+    // Update mouse position
+    window.addEventListener('mousemove', (event) => {
+      if (interactionEnabled) {
+        mouse.x = event.x;
+        mouse.y = event.y;
+      }
+    });
+
+    // Touch Support
+    window.addEventListener('touchmove', (event) => {
+      if (interactionEnabled) {
+        const touch = event.touches[0];
+        mouse.x = touch.clientX;
+        mouse.y = touch.clientY;
+      }
+    });
+
+    window.addEventListener('touchend', () => {
+      mouse.x = undefined;
+      mouse.y = undefined;
+    });
+
+    // Interaction Toggle
+    toggleInteraction.addEventListener('change', () => {
+      interactionEnabled = toggleInteraction.checked;
+    });
+
+    // Sensor Data
+    let deviceMotion = {
+      alpha: 0,
+      beta: 0,
+      gamma: 0
+    };
+
+    sensorToggle.addEventListener('change', () => {
+      if (sensorToggle.checked) {
+        if (window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientation', handleDeviceOrientation);
+        } else {
+          alert('Device Motion not supported on your device.');
+          sensorToggle.checked = false;
+        }
+      } else {
+        window.removeEventListener('deviceorientation', handleDeviceOrientation);
+      }
+    });
+
+    function handleDeviceOrientation(event) {
+      deviceMotion.alpha = event.alpha;
+      deviceMotion.beta = event.beta;
+      deviceMotion.gamma = event.gamma;
+    }
+
+    // Audio Setup
+    let audioContext, analyser, dataArray, source, audioBufferSource;
+    let audioEnabled = false;
+    let audioStream = null;
+    let audioElement = new Audio();
+    let audioPlaying = false;
+    let audioImpact = 1;
+
+    // Initialize Audio Context
+    function initAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    toggleAudioCheckbox.addEventListener('change', () => {
+      audioEnabled = toggleAudioCheckbox.checked;
+      audioControls.classList.toggle('active', audioEnabled);
+      if (!audioEnabled) {
+        stopAudio();
+      }
+    });
+
+    playAudioBtn.addEventListener('click', () => {
+      if (audioElement.src) {
+        audioElement.play();
+        audioPlaying = true;
+        updateAudioStatus();
+      }
+    });
+
+    pauseAudioBtn.addEventListener('click', () => {
+      if (audioElement.src) {
+        audioElement.pause();
+        audioPlaying = false;
+        updateAudioStatus();
+      }
+    });
+
+    stopAudioBtn.addEventListener('click', () => {
+      if (audioElement.src) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        audioPlaying = false;
+        updateAudioStatus();
+      }
+    });
+
+    micButton.addEventListener('click', async () => {
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        initAudioContext();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+
+        source = audioContext.createMediaStreamSource(audioStream);
+        source.connect(analyser);
+
+        // If there's existing audio playback, pause it
+        if (audioElement.paused && audioElement.src) {
+          audioElement.pause();
+          audioPlaying = false;
+          updateAudioStatus();
+        }
+      } catch (err) {
+        alert('Microphone access denied.');
+        console.error(err);
+      }
+    });
+
+    audioFileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          audioElement.src = e.target.result;
+          audioElement.loop = true;
+          audioElement.volume = parseFloat(audioVolumeSlider.value);
+          audioElement.play();
+          audioPlaying = true;
+          updateAudioStatus();
+          initAudioContext();
+
+          if (source) source.disconnect();
+
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          const bufferLength = analyser.frequencyBinCount;
+          dataArray = new Uint8Array(bufferLength);
+
+          source = audioContext.createMediaElementSource(audioElement);
+          source.connect(analyser);
+          source.connect(audioContext.destination);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function updateAudioStatus() {
+      if (audioPlaying) {
+        audioStatus.textContent = 'Audio Playing';
+      } else {
+        audioStatus.textContent = 'Audio Paused';
+      }
+    }
+
+    function stopAudio() {
+      if (source) source.disconnect();
+      if (audioBufferSource) audioBufferSource.disconnect();
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+      }
+      if (audioElement.src) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+      audioPlaying = false;
+      updateAudioStatus();
+    }
+
+    // Audio Volume Control
+    audioVolumeSlider.addEventListener('input', () => {
+      const volume = parseFloat(audioVolumeSlider.value);
+      audioVolumeValue.textContent = volume.toFixed(1);
+      audioElement.volume = volume;
+    });
+
+    // Audio Impact Control
+    audioImpactSlider.addEventListener('input', () => {
+      audioImpact = parseFloat(audioImpactSlider.value);
+      audioImpactValue.textContent = audioImpact.toFixed(1);
+    });
+
+    // Theme Color Picker
+    let themeColor = '#ffffff'; // Default Theme Color
+    themeColorPicker.addEventListener('input', () => {
+      themeColor = themeColorPicker.value;
+    });
+
+    // Particle Shapes
+    let availableShapes = ['circle', 'triangle', 'square'];
+
+    // Particle Class
+    class Particle {
+      constructor(x, y, directionX, directionY, size, shape) {
+        this.x = x;
+        this.y = y;
+        this.directionX = directionX;
+        this.directionY = directionY;
+        this.size = size;
+        this.shape = shape;
+        this.hue = Math.random() * 360;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.fillStyle = `hsl(${this.hue}, 100%, 50%)`;
+        switch (this.shape) {
+          case 'circle':
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+            ctx.fill();
+            break;
+          case 'triangle':
+            ctx.moveTo(this.x, this.y - this.size);
+            ctx.lineTo(this.x + this.size, this.y + this.size);
+            ctx.lineTo(this.x - this.size, this.y + this.size);
+            ctx.closePath();
+            ctx.fill();
+            break;
+          case 'square':
+            ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+            break;
+        }
+      }
+
+      update() {
+        // Bounce off the edges
+        if (this.x + this.size > canvas.width || this.x - this.size < 0) {
+          this.directionX = -this.directionX;
+        }
+        if (this.y + this.size > canvas.height || this.y - this.size < 0) {
+          this.directionY = -this.directionY;
+        }
+
+        // Device Motion Influence
+        if (sensorToggle.checked) {
+          this.directionX += deviceMotion.gamma * 0.001;
+          this.directionY += deviceMotion.beta * 0.001;
+        }
+
+        // Audio Reactive Movement
+        if (audioEnabled && analyser) {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          this.directionX += (Math.random() - 0.5) * (avg / 1000) * particleSpeed * audioImpact;
+          this.directionY += (Math.random() - 0.5) * (avg / 1000) * particleSpeed * audioImpact;
+        } else {
+          // Apply base speed
+          this.directionX *= particleSpeed / 1;
+          this.directionY *= particleSpeed / 1;
+        }
+
+        this.x += this.directionX;
+        this.y += this.directionY;
+
+        // Color Cycling
+        this.hue += 0.5;
+        if (this.hue > 360) this.hue = 0;
+
+        // Interactivity
+        if (interactionEnabled && mouse.x !== null && mouse.y !== null) {
+          const dx = mouse.x - this.x;
+          const dy = mouse.y - this.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < mouse.radius + this.size) {
+            if (mouse.x < this.x && this.x < canvas.width - this.size * 10) {
+              this.x += 3;
+            }
+            if (mouse.x > this.x && this.x > this.size * 10) {
+              this.x -= 3;
+            }
+            if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
+              this.y += 3;
+            }
+            if (mouse.y > this.y && this.y > this.size * 10) {
+              this.y -= 3;
+            }
+          }
+        }
+
+        this.draw();
+      }
+    }
+
+    // Particle Array
+    let particlesArray = [];
+
+    // Initialize Particles
+    function init() {
+      particlesArray = [];
+      const numberOfParticles = parseInt(particleCountSlider.value);
+      for (let i = 0; i < numberOfParticles; i++) {
+        const size = parseFloat(particleSizeSlider.value);
+        const x = Math.random() * (canvas.width - size * 2) + size * 2;
+        const y = Math.random() * (canvas.height - size * 2) + size * 2;
+        const directionX = (Math.random() * 0.5) - 0.25;
+        const directionY = (Math.random() * 0.5) - 0.25;
+        const shape = particleShapeSelect.value;
+
+        particlesArray.push(new Particle(x, y, directionX, directionY, size, shape));
+      }
+    }
+
+    // Connect Particles
+    function connect() {
+      let opacityValue = 1;
+      for (let a = 0; a < particlesArray.length; a++) {
+        for (let b = a; b < particlesArray.length; b++) {
+          const dx = particlesArray[a].x - particlesArray[b].x;
+          const dy = particlesArray[a].y - particlesArray[b].y;
+          const distance = (dx * dx) + (dy * dy);
+          if (distance < (canvas.width / 7) * (canvas.height / 7)) {
+            opacityValue = 1 - (distance / 20000);
+            ctx.strokeStyle = `rgba(255,255,255,${opacityValue})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Create Particle Burst
+    function createBurst(x, y) {
+      for (let i = 0; i < 20; i++) {
+        const size = Math.random() * 3 + 1;
+        const directionX = (Math.random() * 5) - 2.5;
+        const directionY = (Math.random() * 5) - 2.5;
+        const shape = availableShapes[Math.floor(Math.random() * availableShapes.length)];
+        particlesArray.push(new Particle(x, y, directionX, directionY, size, shape));
+      }
+    }
+
+    // Handle Click and Touch Events for Burst
+    function handleCanvasInteraction(event) {
+      // Prevent interactions if clicking/touching on the control panel or hamburger menu
+      if (!controlPanel.contains(event.target) && !hamburger.contains(event.target)) {
+        const rect = canvas.getBoundingClientRect();
+        let x, y;
+        if (event.type.startsWith('touch')) {
+          const touch = event.touches[0] || event.changedTouches[0];
+          x = touch.clientX - rect.left;
+          y = touch.clientY - rect.top;
+        } else {
+          x = event.clientX - rect.left;
+          y = event.clientY - rect.top;
+        }
+        createBurst(x, y);
+      }
+    }
+
+    window.addEventListener('click', handleCanvasInteraction);
+    window.addEventListener('touchstart', handleCanvasInteraction);
+
+    // Update Particle Count in Real-Time
+    particleCountSlider.addEventListener('input', () => {
+      const count = parseInt(particleCountSlider.value);
+      particleCountValue.textContent = count;
+      init();
+    });
+
+    // Update Particle Size
+    particleSizeSlider.addEventListener('input', () => {
+      const size = parseFloat(particleSizeSlider.value);
+      particleSizeValue.textContent = size;
+      init();
+    });
+
+    // Update Particle Speed
+    let particleSpeed = parseFloat(particleSpeedSlider.value);
+    particleSpeedValue.textContent = particleSpeed;
+    particleSpeedSlider.addEventListener('input', () => {
+      particleSpeed = parseFloat(particleSpeedSlider.value);
+      particleSpeedValue.textContent = particleSpeed;
+    });
+
+    // Update Particle Shape
+    particleShapeSelect.addEventListener('change', () => {
+      init();
+    });
+
+    // Audio Visualization Loop
+    function audioLoop() {
+      if (audioEnabled && analyser) {
+        analyser.getByteFrequencyData(dataArray);
+      }
+      requestAnimationFrame(audioLoop);
+    }
+
+    audioLoop(); // Start the audio loop
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      // Draw semi-transparent background for trails
+      ctx.fillStyle = `rgba(13, 13, 13, 0.1)`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      particlesArray.forEach(particle => particle.update());
+      connect();
+    }
+
+    // Initialize and Start Animation
+    init();
+    animate();
+  </script>
+</body>
+</html>
